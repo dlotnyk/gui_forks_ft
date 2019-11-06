@@ -15,6 +15,7 @@ dist/
 downloads/
 eggs/
 .eggs/
+.mypy_cache
 lib/
 lib64/
 parts/
@@ -83,11 +84,8 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
-.env
 .venv
-env/
 venv/
-ENV/
 env.bak/
 venv.bak/
 
@@ -103,3 +101,5 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+!/src/.mypy_cache/
+/src/.mypy_cache/

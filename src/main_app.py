@@ -19,7 +19,7 @@ class ForksGUI:
         self.close_button = tkinter.Button(master, text="Close", command=master.quit)
         self.close_button.pack()
 
-    def greet(self):
+    def greet(self) -> None:
         print("HIIIIIIIIIIII!!!!")
 
 
