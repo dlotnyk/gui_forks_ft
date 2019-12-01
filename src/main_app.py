@@ -138,7 +138,7 @@ class ForksGUI:
     """
     def __init__(self, master: tkinter.Tk) -> None:
         self.master = master  # main
-        master.title("Fork feedthrough caclulation")
+        master.title("Fork feedthrough calculation")
         self.date_convert: float = 2.324243143792273  # convert time from Labview ???
         self.figures_dict: Dict = dict()  # contains object for all figures
         self.long_sweep_data = SweepData()
@@ -217,7 +217,13 @@ class ForksGUI:
         except Exception as ex:
             app_log.error(f"`{figure_key}` was not created due to {ex}")
 
-    def plot_fig_tab1(self, x, y, figure_key):
+    def plot_fig_tab1(self, x: np.ndarray, y: np.ndarray, figure_key: str) -> None:
+        """
+        Plots figure in canvas. Also sets main `axes` properties for each figure
+        :param x: X - array to plot
+        :param y: Y - array to plot
+        :param figure_key: key of figure took from the very top of this file
+        """
         try:
             utctotime = datetime.datetime.utcfromtimestamp(self.long_sweep_data.Time[0] / self.date_convert)
             date1 = str(utctotime.date())
