@@ -1,8 +1,6 @@
 import tkinter
 from tkinter import filedialog
 from tkinter import ttk
-import logging
-from logging.handlers import RotatingFileHandler
 import datetime
 from typing import Set, Dict, Tuple, List, Optional
 from matplotlib.backends.backend_tkagg import (
@@ -10,126 +8,15 @@ from matplotlib.backends.backend_tkagg import (
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 import numpy as np
+from logger import log_settings
+from misc import SweepData, FigEnv
 
 #  Logger definitions
-log_formatter = logging.Formatter('%(asctime)s: %(levelname)s: %(funcName)s line:(%(lineno)d) %(message)s')
-logFile = "app.log"
-my_handler = RotatingFileHandler(logFile, mode="a", maxBytes=2*1024*1024, backupCount=2, encoding=None, delay=False)
-my_handler.setFormatter(log_formatter)
-my_handler.setLevel(logging.DEBUG)
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(log_formatter)
-console_handler.setLevel(logging.INFO)
-app_log = logging.getLogger("ForksFT")
-app_log.setLevel(logging.INFO)
-app_log.addHandler(my_handler)
-app_log.addHandler(console_handler)
+app_log = log_settings()
 
 # Variables
 figure_raw_X = "figure 1"
 figure_raw_Y = "figure 2"
-
-
-class SweepData(object):
-    """
-    class contains and transforms data from .dat file into np.arrays
-
-    :param X: X [mV] - value from lockin
-    :param Y: Y [mV] - value from lockin
-    :param Amplitude: X*X + Y*Y  - value from lockin
-    :param Frequency: fr [Hz] - value from lockin
-    :param Time: UTC time from Labview. really strange. has to apply a conversion factor
-    """
-    def __init__(self):
-        self.X: Optional[np.ndarray] = None
-        self.Y: Optional[np.ndarray] = None
-        self.Amplitude: Optional[np.ndarray] = None
-        self.Frequency: Optional[np.ndarray] = None
-        self.Time: Optional[np.ndarray] = None
-        self.pid: Optional[np.ndarray] = None
-
-    def create_data(self, data: np.ndarray) -> None:
-        """
-        Parse the main data array into separate coordinates.
-        :param data: Data array (Time, Frequency, X, Y, Amplitude, id)
-        """
-        first = True
-        for idx, item in enumerate(data):
-            if first:
-                self.Time = np.array(item[0])
-                self.Frequency = np.array(item[1])
-                self.X = np.array(item[2])
-                self.Y = np.array(item[3])
-                self.Amplitude = np.array(item[4])
-                self.pid = np.array(idx)
-                first = False
-            else:
-                self.Time = np.append(self.Time, item[0])
-                self. Frequency = np.append(self.Frequency, item[1])
-                self.X = np.append(self.X, item[2])
-                self.Y = np.append(self.Y, item[3])
-                self.Amplitude = np.append(self.Amplitude, item[4])
-                self.pid = np.append(self.pid, idx)
-        else:
-            app_log.info("Sweep data were created")
-
-
-class FigEnv(object):
-    """
-    Class for Figure environment settings: Canvas, Figure, axes
-    Stores figure settings of canvas (tkinter) and matplotlib attributes.
-    :param __canvas: tkinter functionality for placing in the correct place.
-    :param __figure: matplotlib main figure property
-    :param __axes: matplotlib axes object
-    :param __Xtype: type of X axis used for set_xlabel
-    :param __Ytype: type of Y axis used for set_ylabel
-    """
-    def __init__(self):
-        self.__canvas = None
-        self.__figure = None
-        self.__axes = None
-        self.__Xtype = None
-        self.__Ytype = None
-
-    @property
-    def canvas(self):
-        return self.__canvas
-
-    @canvas.setter
-    def canvas(self, value):
-        self.__canvas = value
-
-    @property
-    def figure(self):
-        return self.__figure
-
-    @figure.setter
-    def figure(self, figure):
-        self.__figure = figure
-
-    @property
-    def axes(self):
-        return self.__axes
-
-    @axes.setter
-    def axes(self, axes):
-        self.__axes = axes
-
-    @property
-    def Xtype(self):
-        return self.__Xtype
-
-    @Xtype.setter
-    def Xtype(self, xtype):
-        self.__Xtype = xtype
-
-    @property
-    def Ytype(self):
-        return self.__Ytype
-
-    @Ytype.setter
-    def Ytype(self, ytype):
-        self.__Ytype = ytype
 
 
 class ForksGUI:
@@ -158,8 +45,11 @@ class ForksGUI:
         self.figures_dict[figure_raw_Y].Xtype = "Frequency [Hz]"
         self.figures_dict[figure_raw_Y].Ytype = "Y [mV]"
 
+        sc1 = tkinter.Scale(self.tab1, from_=0, to=1, orient='horizontal')
+        sc1.pack(side=tkinter.TOP)
+
         self.close_button = tkinter.Button(master, text="Close", command=master.quit)
-        self.close_button.pack(side=tkinter.BOTTOM)
+        self.close_button.pack(anchor='center')
         self.tab2 = ttk.Frame(self.nb)
         self.nb.add(self.tab2, text="dnit")
         self.nb.pack(expand=1, fill="both")
@@ -211,7 +101,8 @@ class ForksGUI:
             self.figures_dict[figure_key].figure = Figure(figsize=(5, 4), dpi=100)
             self.figures_dict[figure_key].axes = self.figures_dict[figure_key].figure.add_subplot(111)
             self.figures_dict[figure_key].canvas = FigureCanvasTkAgg(self.figures_dict[figure_key].figure, master=area)
-            self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+            # self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+            self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, expand=1)
             self.figures_dict[figure_key].canvas.draw()
             app_log.info(f"`{figure_key}` canvas was successfully created")
         except Exception as ex:
@@ -225,8 +116,11 @@ class ForksGUI:
         :param figure_key: key of figure took from the very top of this file
         """
         try:
-            utctotime = datetime.datetime.utcfromtimestamp(self.long_sweep_data.Time[0] / self.date_convert)
-            date1 = str(utctotime.date())
+            if self.long_sweep_data.Time is not None:
+                utctotime = datetime.datetime.utcfromtimestamp(self.long_sweep_data.Time[0] / self.date_convert)
+                date1 = str(utctotime.date())
+            else:
+                date1 = ""
             self.figures_dict[figure_key].axes.clear()
             self.figures_dict[figure_key].axes.scatter(x, y)
             self.figures_dict[figure_key].axes.plot(x, y, color='red')
@@ -236,9 +130,8 @@ class ForksGUI:
             self.figures_dict[figure_key].axes.set_xlim(min(x), max(x))
             self.figures_dict[figure_key].axes.set_ylim(min(y), max(y))
             self.figures_dict[figure_key].axes.grid()
-            self.figures_dict[figure_key].axes.plot()
             self.figures_dict[figure_key].canvas.draw()
-            app_log.info(f"`{figure_key}` was updated")
+            app_log.info(f"`{figure_key}` raw data were plotted")
         except Exception as ex:
             app_log.error(f"`{figure_key}` was not updated due to: {ex}")
 
