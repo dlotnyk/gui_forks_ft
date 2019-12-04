@@ -1,5 +1,9 @@
 import numpy as np
 from typing import Set, Dict, Tuple, List, Optional
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
 from logger import log_settings
 
 
@@ -57,20 +61,25 @@ class FigEnv(object):
     :param __axes: matplotlib axes object
     :param __Xtype: type of X axis used for set_xlabel
     :param __Ytype: type of Y axis used for set_ylabel
+    :param __px: x-grid dimensions for layout
+    :param __py: y-grid dimensions for layout
     """
     def __init__(self):
-        self.__canvas = None
-        self.__figure = None
-        self.__axes = None
-        self.__Xtype = None
-        self.__Ytype = None
+        self.__canvas: Optional[FigureCanvasTkAgg] = None
+        self.__figure: Optional[Figure] = None
+        self.__axes: Optional[Figure.axes] = None
+        self.__Xtype: Optional[str] = None
+        self.__Ytype: Optional[str] = None
+        self.__px: int = 5
+        self.__py: int = 4
+        self.__mask = None
 
     @property
-    def canvas(self):
+    def canvas(self) -> FigureCanvasTkAgg:
         return self.__canvas
 
     @canvas.setter
-    def canvas(self, value):
+    def canvas(self, value: FigureCanvasTkAgg) -> None:
         self.__canvas = value
 
     @property
@@ -78,29 +87,45 @@ class FigEnv(object):
         return self.__figure
 
     @figure.setter
-    def figure(self, figure):
+    def figure(self, figure: Figure):
         self.__figure = figure
 
     @property
-    def axes(self):
+    def axes(self) -> Figure.axes:
         return self.__axes
 
     @axes.setter
-    def axes(self, axes):
+    def axes(self, axes: Figure.axes) -> None:
         self.__axes = axes
 
     @property
-    def Xtype(self):
+    def Xtype(self) -> Optional[str]:
         return self.__Xtype
 
     @Xtype.setter
-    def Xtype(self, xtype):
+    def Xtype(self, xtype: str) -> None:
         self.__Xtype = xtype
 
     @property
-    def Ytype(self):
+    def Ytype(self) -> Optional[str]:
         return self.__Ytype
 
     @Ytype.setter
-    def Ytype(self, ytype):
+    def Ytype(self, ytype: str) -> None:
         self.__Ytype = ytype
+
+    @property
+    def px(self) -> int:
+        return self.__px
+
+    @px.setter
+    def px(self, px: int) -> None:
+        self.__px = px
+
+    @property
+    def py(self) -> int:
+        return self.__py
+
+    @py.setter
+    def py(self, py: int) -> None:
+        self.__py = py

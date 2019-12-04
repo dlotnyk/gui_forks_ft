@@ -17,6 +17,7 @@ app_log = log_settings()
 # Variables
 figure_raw_X = "figure 1"
 figure_raw_Y = "figure 2"
+figure_fit_X = "figure 3"
 
 
 class ForksGUI:
@@ -32,27 +33,30 @@ class ForksGUI:
         self.label = tkinter.Label(master, text="Fork Feedthrough parameters calculation")
         self.label.pack()
         self.nb = ttk.Notebook(master)
+        # firest tab buttons/figures
         self.tab1 = ttk.Frame(self.nb)
-        self.nb.add(self.tab1, text="Initialization")
+        self.nb.add(self.tab1, text="Wide sweep")
         self.nb.pack(expand=1, fill="both")
-
         self.greet_button = tkinter.Button(self.tab1, text="Open Wide Sweep", command=self.open_wide_sweep)
         self.greet_button.pack(side=tkinter.BOTTOM)
         self.figure_tab1(self.tab1, figure_raw_X)
         self.figures_dict[figure_raw_X].Xtype = "Frequency [Hz]"
         self.figures_dict[figure_raw_X].Ytype = "X [mV]"
+        sc1 = tkinter.Scale(self.tab1, from_=0, to=100, orient='horizontal', length=300, cursor="dot")
+        sc1.pack(side=tkinter.TOP, expand=1)
         self.figure_tab1(self.tab1, figure_raw_Y)
         self.figures_dict[figure_raw_Y].Xtype = "Frequency [Hz]"
         self.figures_dict[figure_raw_Y].Ytype = "Y [mV]"
-
-        sc1 = tkinter.Scale(self.tab1, from_=0, to=1, orient='horizontal')
-        sc1.pack(side=tkinter.TOP)
-
         self.close_button = tkinter.Button(master, text="Close", command=master.quit)
         self.close_button.pack(anchor='center')
+        # second button
+        # todo: grid layout
         self.tab2 = ttk.Frame(self.nb)
-        self.nb.add(self.tab2, text="dnit")
-        self.nb.pack(expand=1, fill="both")
+        self.nb.add(self.tab2, text="Short sweep")
+        self.nb.pack(fill="both")
+        self.figure_tab2(self.tab2, figure_fit_X, 1, 0)
+        sc2 = tkinter.Scale(self.tab2, from_=0, to=1, orient='horizontal')
+        sc2.grid(row=5, column=0, columnspan=5)
 
     def open_wide_sweep(self) -> None:
         """
@@ -101,8 +105,8 @@ class ForksGUI:
             self.figures_dict[figure_key].figure = Figure(figsize=(5, 4), dpi=100)
             self.figures_dict[figure_key].axes = self.figures_dict[figure_key].figure.add_subplot(111)
             self.figures_dict[figure_key].canvas = FigureCanvasTkAgg(self.figures_dict[figure_key].figure, master=area)
-            # self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
-            self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, expand=1)
+            self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+            # self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, expand=1)
             self.figures_dict[figure_key].canvas.draw()
             app_log.info(f"`{figure_key}` canvas was successfully created")
         except Exception as ex:
@@ -134,6 +138,27 @@ class ForksGUI:
             app_log.info(f"`{figure_key}` raw data were plotted")
         except Exception as ex:
             app_log.error(f"`{figure_key}` was not updated due to: {ex}")
+
+    def figure_tab2(self, area: ttk.Frame, figure_key: str, row: int, col: int) -> None:
+        """
+        figure in matplotlib
+        :param area: Area where figure will be build
+        :param figure_key: figure key in dictionary figure list
+        """
+        try:
+            self.figures_dict.update({figure_key: FigEnv()})
+            px = self.figures_dict[figure_key].px
+            py = self.figures_dict[figure_key].py
+            self.figures_dict[figure_key].figure = Figure(figsize=(5, 4), dpi=100)
+            self.figures_dict[figure_key].axes = self.figures_dict[figure_key].figure.add_subplot(111)
+            self.figures_dict[figure_key].canvas = FigureCanvasTkAgg(self.figures_dict[figure_key].figure, master=area)
+            # self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
+            # self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, expand=1)
+            self.figures_dict[figure_key].canvas.get_tk_widget().grid(row=row, column=col, padx=px, pady=py)
+            self.figures_dict[figure_key].canvas.draw()
+            app_log.info(f"`{figure_key}` canvas was successfully created")
+        except Exception as ex:
+            app_log.error(f"`{figure_key}` was not created due to {ex}")
 
 
 if __name__ == "__main__":
