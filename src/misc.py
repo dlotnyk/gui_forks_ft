@@ -24,7 +24,11 @@ class SweepData(object):
         self.Frequency: Optional[np.ndarray] = None
         self.Time: Optional[np.ndarray] = None
         self.pid: Optional[np.ndarray] = None
+        self.mask: Optional[np.ndarray] = None
         self.app_log = log_settings()
+        self.slider1: int = 0
+        self.slider2: int = 1
+        self.max_slider: int = 0
 
     def create_data(self, data: np.ndarray) -> None:
         """
@@ -51,6 +55,19 @@ class SweepData(object):
         else:
             self.app_log.info("Sweep data were created")
 
+    def create_mask(self) -> None:
+        """
+        Create a bool mask after importing a dat file.
+        """
+        if self.Frequency is not None:
+            self.mask = np.ones(len(self.Frequency), dtype=bool)
+            self.slider1 = 0
+            self.slider2 = len(self.Frequency) - 1
+            self.max_slider = len(self.Frequency) - 1
+            self.app_log.info("mask was created")
+        else:
+            self.app_log.warning("You should import a data file first")
+
 
 class FigEnv(object):
     """
@@ -63,6 +80,7 @@ class FigEnv(object):
     :param __Ytype: type of Y axis used for set_ylabel
     :param __px: x-grid dimensions for layout
     :param __py: y-grid dimensions for layout
+    :param __scat: scatter object for plot
     """
     def __init__(self):
         self.__canvas: Optional[FigureCanvasTkAgg] = None
@@ -72,7 +90,7 @@ class FigEnv(object):
         self.__Ytype: Optional[str] = None
         self.__px: int = 5
         self.__py: int = 4
-        self.__mask = None
+        self.__scat = None
 
     @property
     def canvas(self) -> FigureCanvasTkAgg:
@@ -129,3 +147,11 @@ class FigEnv(object):
     @py.setter
     def py(self, py: int) -> None:
         self.__py = py
+
+    @property
+    def scat(self):
+        return self.__scat
+
+    @scat.setter
+    def scat(self, scat) -> None:
+        self.__scat = scat

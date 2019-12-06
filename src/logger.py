@@ -9,7 +9,7 @@ class Logger():
 
 def log_settings():
     #  Logger definitions
-    log_formatter = logging.Formatter('%(asctime)s: %(levelname)s: %(funcName)s line:(%(lineno)d) %(message)s')
+    log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s - line: %(lineno)d - %(message)s')
     logFile = "app.log"
     my_handler = RotatingFileHandler(logFile, mode="a", maxBytes=2*1024*1024, backupCount=2, encoding=None, delay=False)
     my_handler.setFormatter(log_formatter)
