@@ -1,9 +1,7 @@
 name: Fork feedthrough app
 
 on:
-  pull_request:
-    branches:  
-      - master
+  push
 
 jobs:
   my_job:
