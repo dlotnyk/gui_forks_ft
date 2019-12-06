@@ -185,6 +185,7 @@ class ForksGUI:
         """
         var1 = self.slide1.get()
         var2 = self.slide2.get()
+        print(var1, var2)
         try:
             if self.long_sd.Frequency.any() and self.long_sd.mask.any() \
                     and self.long_sd.X.any() and self.long_sd.Y.any():
