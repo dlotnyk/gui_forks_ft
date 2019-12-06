@@ -18,6 +18,8 @@ app_log = log_settings()
 fig_r_X = "figure 1"
 fig_r_Y = "figure 2"
 figure_fit_X = "figure 3"
+fig_d_X = "figure 4"
+fig_d_Y = "figure 5"
 
 
 class ForksGUI:
@@ -41,6 +43,8 @@ class ForksGUI:
         self.tab1 = ttk.Frame(self.nb)
         self.nb.add(self.tab1, text="Wide sweep")
         self.nb.pack(expand=1, fill="both")
+        self.fit_button = tkinter.Button(self.tab1, text="Fit the Wide Sweep", command=self.fit_wide_sweep)
+        self.fit_button.pack(side=tkinter.BOTTOM)
         self.greet_button = tkinter.Button(self.tab1, text="Open Wide Sweep", command=self.open_wide_sweep)
         self.greet_button.pack(side=tkinter.BOTTOM)
         self.figure_tab1(self.tab1, fig_r_X)
@@ -68,6 +72,16 @@ class ForksGUI:
         self.figure_tab2(self.tab2, figure_fit_X, 1, 0)
         # sc2 = tkinter.Scale(self.tab2, from_=0, to=1, orient='horizontal')
         # sc2.grid(row=5, column=0, sticky="nsew")
+        # third tab
+        self.tab3 = ttk.Frame(self.nb)
+        self.nb.add(self.tab3, text="Substraction of the wide sweep")
+        self.nb.pack(expand=1, fill="both")
+        self.figure_tab1(self.tab3, fig_d_X)
+        self.figures_dict[fig_d_X].Xtype = "Frequency [Hz]"
+        self.figures_dict[fig_d_X].Ytype = "X - fitX [mV]"
+        self.figure_tab1(self.tab3, fig_d_Y)
+        self.figures_dict[fig_d_Y].Xtype = "Frequency [Hz]"
+        self.figures_dict[fig_d_Y].Ytype = "Y - fitY [mV]"
 
     def open_wide_sweep(self) -> None:
         """
@@ -144,8 +158,7 @@ class ForksGUI:
                 date1 = ""
             self.figures_dict[figure_key].axes.clear()
             self.figures_dict[figure_key].scat = self.figures_dict[figure_key].axes.scatter(x, y, s=5)
-            # self.figures_dict[figure_key].axes.plot(x, y, color='red')
-            self.figures_dict[figure_key].axes.set_title(f"Wide sweep at {date1}")
+            self.figures_dict[figure_key].axes.set_title(f" {figure_key}: Wide sweep at {date1}")
             self.figures_dict[figure_key].axes.set_xlabel(self.figures_dict[figure_key].Xtype)
             self.figures_dict[figure_key].axes.set_ylabel(self.figures_dict[figure_key].Ytype)
             self.figures_dict[figure_key].axes.set_xlim(min(x), max(x))
@@ -185,7 +198,6 @@ class ForksGUI:
         """
         var1 = self.slide1.get()
         var2 = self.slide2.get()
-        print(var1, var2)
         try:
             if self.long_sd.Frequency.any() and self.long_sd.mask.any() \
                     and self.long_sd.X.any() and self.long_sd.Y.any():
@@ -199,14 +211,93 @@ class ForksGUI:
                 self.figures_dict[fig_r_Y].scat.remove()
                 self.figures_dict[fig_r_X].scat = \
                     self.figures_dict[fig_r_X].axes.scatter(self.long_sd.Frequency[self.long_sd.mask],
-                                                            self.long_sd.X[self.long_sd.mask], s=5, c="blue")
+                                                            self.long_sd.X[self.long_sd.mask], s=10, c="blue")
                 self.figures_dict[fig_r_Y].scat = \
                     self.figures_dict[fig_r_Y].axes.scatter(self.long_sd.Frequency[self.long_sd.mask],
-                                                            self.long_sd.Y[self.long_sd.mask], s=5, c="blue")
+                                                            self.long_sd.Y[self.long_sd.mask], s=10, c="blue")
                 self.figures_dict[fig_r_X].canvas.draw()
                 self.figures_dict[fig_r_Y].canvas.draw()
         except Exception as ex:
             app_log.error(f"Update slider fails: {ex}")
+
+    def fit_wide_sweep(self):
+        """
+        Fit the wide sweep. X with poly of 3, Y with poly of 4. Using mask
+        """
+        try:
+            if self.long_sd.Frequency.any() and self.long_sd.mask.any() \
+                    and self.long_sd.X.any() and self.long_sd.Y.any():
+                self.fit_x = np.polyfit(self.long_sd.Frequency[self.long_sd.mask],
+                                   self.long_sd.X[self.long_sd.mask], 3)
+                self.fit_y = np.polyfit(self.long_sd.Frequency[self.long_sd.mask],
+                                   self.long_sd.Y[self.long_sd.mask], 4)
+                r_fit_x = np.poly1d(self.fit_x)
+                r_fit_y = np.poly1d(self.fit_y)
+                if self.figures_dict[fig_r_X].pltt:
+                    self.figures_dict[fig_r_X].pltt.remove()
+                self.figures_dict[fig_r_X].pltt = \
+                    self.figures_dict[fig_r_X].axes.scatter(self.long_sd.Frequency,
+                                                            r_fit_x(self.long_sd.Frequency), c="red", s=1)
+                self.figures_dict[fig_r_X].axes.set_ylim(min(r_fit_x(self.long_sd.Frequency)),
+                                                         max(r_fit_x(self.long_sd.Frequency)))
+                self.figures_dict[fig_r_X].canvas.draw()
+                if self.figures_dict[fig_r_Y].pltt:
+                    self.figures_dict[fig_r_Y].pltt.remove()
+                self.figures_dict[fig_r_Y].pltt = \
+                    self.figures_dict[fig_r_Y].axes.scatter(self.long_sd.Frequency,
+                                                            r_fit_y(self.long_sd.Frequency), c="red", s=1)
+                self.figures_dict[fig_r_Y].axes.set_ylim(min(r_fit_y(self.long_sd.Frequency)),
+                                                         max(r_fit_y(self.long_sd.Frequency)))
+                self.figures_dict[fig_r_Y].canvas.draw()
+                # print(len(self.figures_dict[fig_r_X].pltt))
+                self.plot_subtr()
+                app_log.info("Fit of wide sweep was done")
+        except Exception as ex:
+            app_log.error(f"Fail to fit: {ex}")
+
+    def plot_subtr(self) -> None:
+        """
+        Plot subtraction after import wide sweep and fitting the graphs
+        """
+        try:
+            if (self.long_sd.X is not None) and (self.long_sd.Y is not None) and \
+                    (self.long_sd.Frequency is not None):
+                r_fit_x = np.poly1d(self.fit_x)
+                r_fit_y = np.poly1d(self.fit_y)
+                dx = np.subtract(self.long_sd.X, r_fit_x(self.long_sd.Frequency))
+                dy = np.subtract(self.long_sd.Y, r_fit_y(self.long_sd.Frequency))
+                if self.figures_dict[fig_d_X].scat is None:
+                    self.figures_dict[fig_d_X].axes.clear()
+                    self.figures_dict[fig_d_X].axes.set_title(f"{fig_d_X}: Subtract of X")
+                    self.figures_dict[fig_d_X].axes.set_xlabel(self.figures_dict[fig_d_X].Xtype)
+                    self.figures_dict[fig_d_X].axes.set_ylabel(self.figures_dict[fig_d_X].Ytype)
+                    self.figures_dict[fig_d_X].axes.set_xlim(min(self.long_sd.Frequency), max(self.long_sd.Frequency))
+                    self.figures_dict[fig_d_X].axes.set_ylim(min(dx), max(dx))
+                    self.figures_dict[fig_d_X].axes.grid()
+                else:
+                    self.figures_dict[fig_d_X].scat.remove()
+                self.figures_dict[fig_d_X].scat = self.figures_dict[fig_d_X].axes.scatter(self.long_sd.Frequency, dx,
+                                                                                          s=5, c="green")
+                self.figures_dict[fig_d_X].canvas.draw()
+                app_log.info(f"`{fig_d_X}` subtract data were plotted")
+                if self.figures_dict[fig_d_Y].scat is None:
+                    self.figures_dict[fig_d_Y].axes.clear()
+                    self.figures_dict[fig_d_Y].axes.set_title(f"{fig_d_Y}: Subtract of Y")
+                    self.figures_dict[fig_d_Y].axes.set_xlabel(self.figures_dict[fig_d_Y].Xtype)
+                    self.figures_dict[fig_d_Y].axes.set_ylabel(self.figures_dict[fig_d_Y].Ytype)
+                    self.figures_dict[fig_d_Y].axes.set_xlim(min(self.long_sd.Frequency), max(self.long_sd.Frequency))
+                    self.figures_dict[fig_d_Y].axes.set_ylim(min(dy), max(dy))
+                    self.figures_dict[fig_d_Y].axes.grid()
+                else:
+                    self.figures_dict[fig_d_Y].scat.remove()
+                self.figures_dict[fig_d_Y].scat = self.figures_dict[fig_d_Y].axes.scatter(self.long_sd.Frequency, dy,
+                                                                                          s=5, c="green")
+                self.figures_dict[fig_d_Y].canvas.draw()
+                app_log.info(f"`{fig_d_Y}` subtract data were plotted")
+
+
+        except Exception as ex:
+            app_log.error(f"Plot sub is fail: {ex}")
 
 
 if __name__ == "__main__":

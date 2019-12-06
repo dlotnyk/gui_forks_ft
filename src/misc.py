@@ -4,6 +4,7 @@ from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
+from matplotlib.collections import PathCollection
 from logger import log_settings
 
 
@@ -80,7 +81,8 @@ class FigEnv(object):
     :param __Ytype: type of Y axis used for set_ylabel
     :param __px: x-grid dimensions for layout
     :param __py: y-grid dimensions for layout
-    :param __scat: scatter object for plot
+    :param __scat: scatter object for plot (raw)
+    :param __pltt: plot object for plot (fit)
     """
     def __init__(self):
         self.__canvas: Optional[FigureCanvasTkAgg] = None
@@ -90,7 +92,8 @@ class FigEnv(object):
         self.__Ytype: Optional[str] = None
         self.__px: int = 5
         self.__py: int = 4
-        self.__scat = None
+        self.__scat: Optional[PathCollection] = None
+        self.__pltt: Optional[PathCollection] = None
 
     @property
     def canvas(self) -> FigureCanvasTkAgg:
@@ -149,9 +152,18 @@ class FigEnv(object):
         self.__py = py
 
     @property
-    def scat(self):
+    def scat(self) -> PathCollection:
         return self.__scat
 
     @scat.setter
-    def scat(self, scat) -> None:
+    def scat(self, scat: PathCollection) -> None:
         self.__scat = scat
+
+    @property
+    def pltt(self) -> PathCollection:
+        return self.__pltt
+
+    @pltt.setter
+    def pltt(self, pltt: PathCollection) -> None:
+        self.__pltt = pltt
+
