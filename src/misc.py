@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Set, Dict, Tuple, List, Optional
+from typing import Set, Dict, Tuple, List, Optional, NamedTuple
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 from matplotlib.backend_bases import key_press_handler
@@ -26,10 +26,13 @@ class SweepData(object):
         self.Time: Optional[np.ndarray] = None
         self.pid: Optional[np.ndarray] = None
         self.mask: Optional[np.ndarray] = None
+        self.dx: Optional[np.ndarray] = None
+        self.dy: Optional[np.ndarray] = None
         self.app_log = log_settings()
         self.slider1: int = 0
         self.slider2: int = 1
         self.max_slider: int = 0
+        self.group: Optional[str] = None
 
     def create_data(self, data: np.ndarray) -> None:
         """
@@ -55,6 +58,12 @@ class SweepData(object):
                 self.pid = np.append(self.pid, idx)
         else:
             self.app_log.info("Sweep data were created")
+
+    def update_deltax(self, delta: np.ndarray):
+        self.dx = delta
+
+    def update_deltay(self, delta: np.ndarray):
+        self.dx = delta
 
     def create_mask(self) -> None:
         """
@@ -83,6 +92,7 @@ class FigEnv(object):
     :param __py: y-grid dimensions for layout
     :param __scat: scatter object for plot (raw)
     :param __pltt: plot object for plot (fit)
+    :param __polk: group attribute, Wide, Short, maybe fit. etc
     """
     def __init__(self):
         self.__canvas: Optional[FigureCanvasTkAgg] = None
@@ -166,4 +176,30 @@ class FigEnv(object):
     @pltt.setter
     def pltt(self, pltt: PathCollection) -> None:
         self.__pltt = pltt
+
+
+class FigureGroup(NamedTuple):
+    """
+    Grouping of figures into wide, short ones
+    Attributes:
+        :param name: name of group
+        :param x: raw X
+        :param y: raw Y
+        :param fit_x: background X
+        :param fit_y: background Y
+    """
+    name: str
+    x: str
+    y: str
+    sub_x: str
+    sub_y: str
+
+
+class FitParams:
+    """
+    Contains all necessary fitting parameters and method to access/change those
+    """
+    def __init__(self):
+        self.__fitx: Optional[np.ndarray] = None
+        self.__fity: Optional[np.ndarray] = None
 
