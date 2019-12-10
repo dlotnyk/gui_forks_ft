@@ -7,6 +7,9 @@ from matplotlib.figure import Figure
 from matplotlib.collections import PathCollection
 from logger import log_settings
 
+#logger
+app_log = log_settings()
+
 
 class SweepData(object):
     """
@@ -28,7 +31,7 @@ class SweepData(object):
         self.mask: Optional[np.ndarray] = None
         self.dx: Optional[np.ndarray] = None
         self.dy: Optional[np.ndarray] = None
-        self.app_log = log_settings()
+        # app_log = log_settings()
         self.slider1: int = 0
         self.slider2: int = 1
         self.max_slider: int = 0
@@ -57,13 +60,13 @@ class SweepData(object):
                 self.Amplitude = np.append(self.Amplitude, item[4])
                 self.pid = np.append(self.pid, idx)
         else:
-            self.app_log.info("Sweep data were created")
+            app_log.info("Sweep data were created")
 
     def update_deltax(self, delta: np.ndarray):
         self.dx = delta
 
     def update_deltay(self, delta: np.ndarray):
-        self.dx = delta
+        self.dy = delta
 
     def create_mask(self) -> None:
         """
@@ -74,9 +77,25 @@ class SweepData(object):
             self.slider1 = 0
             self.slider2 = len(self.Frequency) - 1
             self.max_slider = len(self.Frequency) - 1
-            self.app_log.info("mask was created")
+            app_log.info("mask was created")
         else:
-            self.app_log.warning("You should import a data file first")
+            app_log.warning("You should import a data file first")
+
+    def update_y_tail(self, idm: np.ndarray, delta: float) -> None:
+        """
+        FIxes the Y tail and updates whole Y array
+        :param idm: Index of the jump value
+        :param delta: Jump of the Y value
+        :num: points to cut around jump
+        """
+        num = 10
+        try:
+            part1 = np.add(self.Y[0:idm], delta)
+            self.Y = np.concatenate((part1, self.Y[idm:]))
+        except Exception as ex:
+            app_log.error(f"y-tail fails: {ex}")
+        else:
+            app_log.info(f"ytail concentrated {len(self.Frequency)} vs {len(self.Y)}")
 
 
 class FigEnv(object):
@@ -202,4 +221,49 @@ class FitParams:
     def __init__(self):
         self.__fitx: Optional[np.ndarray] = None
         self.__fity: Optional[np.ndarray] = None
+
+    @property
+    def fitx(self) -> np.ndarray:
+        return self.__fitx
+
+    @fitx.setter
+    def fitx(self, vals: np.ndarray) -> None:
+        self.__fitx = vals
+
+    @property
+    def fity(self) -> np.ndarray:
+        return self.__fity
+
+    @fity.setter
+    def fity(self, vals: np.ndarray) -> None:
+        self.__fity = vals
+
+    def update_slope_x(self, val: float) -> None:
+        """
+        Update slope of X fit parameter by value val.
+        :param val: increment to add
+        """
+        try:
+            if self.__fitx is not None:
+                old = self.__fitx
+                self.__fitx[-2] += val
+                new = self.__fitx
+                if np.array_equal(old, new):
+                    app_log.info("New slope is set")
+                else:
+                    app_log.info("Slope has NOT been changed")
+        except Exception as ex:
+            app_log.error(f"Can not change slope x: {ex}")
+
+    def update_intersect_x(self, val: float) -> None:
+        """
+        Updates the intersect of X fit parameter by value val.
+        :param val: increment to change the intersect of fit X
+        """
+        try:
+            if self.__fitx is not None:
+                self.__fitx[-1] += val
+        except Exception as ex:
+            app_log.error(f"Can not change intersect X: {ex}")
+
 
