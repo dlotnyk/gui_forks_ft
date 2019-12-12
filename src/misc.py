@@ -89,13 +89,14 @@ class SweepData(object):
         :num: points to cut around jump
         """
         num = 10
-        try:
-            part1 = np.add(self.Y[0:idm], delta)
-            self.Y = np.concatenate((part1, self.Y[idm:]))
-        except Exception as ex:
-            app_log.error(f"y-tail fails: {ex}")
-        else:
-            app_log.info(f"ytail concentrated {len(self.Frequency)} vs {len(self.Y)}")
+        if (self.Y is not None) and (self.Frequency is not None):
+            try:
+                part1 = np.add(self.Y[0:idm], delta)
+                self.Y = np.concatenate((part1, self.Y[idm:]))
+            except Exception as ex:
+                app_log.error(f"y-tail fails: {ex}")
+            else:
+                app_log.info(f"ytail concentrated {len(self.Frequency)} vs {len(self.Y)}")
 
 
 class FigEnv(object):

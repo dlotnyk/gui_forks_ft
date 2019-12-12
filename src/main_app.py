@@ -287,8 +287,8 @@ class ForksGUI:
         var1 = self.slide1.get()
         var2 = self.slide2.get()
         try:
-            if long_sd.Frequency.any() and long_sd.mask.any() \
-                    and long_sd.X.any() and long_sd.Y.any():
+            if long_sd.Frequency is not None and long_sd.mask is not None \
+                    and long_sd.X is not None and long_sd.Y is not None:
                 if var2 > var1:
                     long_sd.mask[0:var1] = True
                     long_sd.mask[var2:-1] = True
@@ -313,8 +313,8 @@ class ForksGUI:
         Fit the wide sweep. X with poly of 3, Y with poly of 4. Using mask
         """
         try:
-            if long_sd.Frequency.any() and long_sd.mask.any() \
-                    and long_sd.X.any() and long_sd.Y.any():
+            if long_sd.Frequency is not None and long_sd.mask is not None \
+                    and long_sd.X is not None and long_sd.Y is not None:
 
                 fits.fitx = np.polyfit(long_sd.Frequency[long_sd.mask],
                                    long_sd.X[long_sd.mask], 3)
