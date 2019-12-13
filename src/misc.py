@@ -1,5 +1,6 @@
 import numpy as np
-from typing import Set, Dict, Tuple, List, Optional, NamedTuple
+from abc import ABC
+from typing import Set, Dict, Tuple, List, Optional, NamedTuple, Iterable
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 from matplotlib.backend_bases import key_press_handler
@@ -31,11 +32,15 @@ class SweepData(object):
         self.mask: Optional[np.ndarray] = None
         self.dx: Optional[np.ndarray] = None
         self.dy: Optional[np.ndarray] = None
+        self.dx_fit: Optional[np.ndarray] = None
+        self.dy_fit: Optional[np.ndarray] = None
         # app_log = log_settings()
         self.slider1: int = 0
         self.slider2: int = 1
         self.max_slider: int = 0
         self.group: Optional[str] = None
+        self.ind_max: Optional[int] = None
+        self.fit_params: Optional[Tuple] = None
 
     def create_data(self, data: np.ndarray) -> None:
         """
@@ -97,6 +102,69 @@ class SweepData(object):
                 app_log.error(f"y-tail fails: {ex}")
             else:
                 app_log.info(f"ytail concentrated {len(self.Frequency)} vs {len(self.Y)}")
+
+    @staticmethod
+    def chan_x(f: np.float, f0: np.float, q: np.float, a: np.float) -> np.float:
+        """
+        The theory curve of X-channel on resonant curve
+        :param f: independent var in this case - frequency
+        :param f0: resonant frequency
+        :param q: q-factor of the resonance curve
+        :param a: amplitude
+        :return res: the value obtained on X channel
+        """
+        f = np.float(f)
+        f0 = np.float(f0)
+        q = np.float(q)
+        a = np.float(a)
+        top = a*f*f0/q
+        bot1 = (f**2 - f0**2)**2
+        bot2 = f**2 * f0**2/q**2
+        res = top/(bot1+bot2)
+        return np.float(res)
+
+    @staticmethod
+    def chan_y(f: float, f0: float, q: float, a: float) -> float:
+        """
+        The theory curve of Y-channel on resonant curve
+        :param f: independent var in this case - frequency
+        :param f0: resonant frequency
+        :param q: q-factor of the resonance curve
+        :param a: amplitude
+        :return y: the value obtained on Y channel
+        """
+        return -a*((f*f - f0*f0)/((f*f - f0*f0)**2+(f*f*f0*f0/(q*q))))
+
+    def gen_fit_x(self, f0: float, q: float, a: float) -> None:
+        """
+        Generate the theory X values
+        """
+        if (self.dx is not None) and (self.Frequency is not None):
+            self.dx_fit = np.array([self.chan_x(ii, f0, q, a) for ii in self.Frequency])
+        else:
+            app_log.warning(f"Short sweep or fit of wide sweep is not performed")
+
+    def gen_fit_y(self, f0: float, q: float, a: float) -> None:
+        """
+        Generate the theory Y values
+        """
+        if (self.dy is not None) and (self.Frequency is not None):
+            self.dy_fit = np.array([self.chan_y(ii, f0, q, a) for ii in self.Frequency])
+        else:
+            app_log.warning(f"Short sweep or fit of wide sweep is not performed")
+
+    def fun_fit_x(self, x: np.ndarray, f0: float, q: float, a: float) -> np.ndarray:
+        """
+        Fitting function for X-channel
+        """
+        return np.array([self.chan_x(ii, f0, q, a) for ii in x])
+
+    def set_fit_params(self, popt: Iterable):
+        """
+        Sets fit parameters as resonant frequency, Q, Amplitude.
+        The output from scipy.optimal.curve_fit
+        """
+        self.fit_params = tuple(popt)
 
 
 class FigEnv(object):
@@ -266,5 +334,24 @@ class FitParams:
                 self.__fitx[-1] += val
         except Exception as ex:
             app_log.error(f"Can not change intersect X: {ex}")
+
+    def update_intersect_y(self, val: float) -> None:
+        """
+        Updates the intersect of Y fit parameter by value val.
+        :param val: increment to change the intersect of fit Y
+        """
+        try:
+            if self.__fity is not None:
+                self.__fity[-1] += val
+        except Exception as ex:
+            app_log.error(f"Can not change intersect Y: {ex}")
+
+
+class Mediator(ABC):
+    """
+    Uses for update the fit parameters printing initiates by setters inside FitParams class
+    """
+    def notify(self, sender, event):
+        pass
 
 

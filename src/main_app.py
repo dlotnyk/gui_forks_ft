@@ -10,9 +10,10 @@ from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 import numpy as np
 import scipy.signal as sci
+from scipy.optimize import curve_fit
 
 from logger import log_settings
-from misc import SweepData, FigEnv, FigureGroup, FitParams
+from misc import SweepData, FigEnv, FigureGroup, FitParams, Mediator
 
 #  Logger definitions
 app_log = log_settings()
@@ -30,8 +31,14 @@ fig_sh_sw_X = "figure 6"
 fig_sh_sw_Y = "figure 7"
 fig_sh_d_X = "figure 8"
 fig_sh_d_Y = "figure 9"
+fig_theory_x = "figure 10"
 fig_wide = FigureGroup("wide", fig_r_X, fig_r_Y, fig_d_X, fig_d_Y)
 fig_short = FigureGroup("short", fig_sh_sw_X, fig_sh_sw_Y, fig_sh_d_X, fig_sh_d_Y)
+fit_str = ("x0 = ", "x1 = ", "x2 = ", "x3 = ", "y1 = ", "y2 = ", "y3 = ", "y4 = ", "f0 = ", "Q = ", "K = ")
+
+
+# class UpdateFitText(Mediator):
+#     def __init__(self, component1: ForksGUI, ):
 
 
 class ForksGUI:
@@ -124,6 +131,10 @@ class ForksGUI:
         self.fixx_button.pack(side=tkinter.BOTTOM)
         self.interx_button = tkinter.Button(self.tab5, text="Intersect X", command=self.fix_intesect_x)
         self.interx_button.pack(side=tkinter.BOTTOM)
+        self.intery_button = tkinter.Button(self.tab5, text="Intersect Y", command=self.fix_intersect_y)
+        self.intery_button.pack(side=tkinter.BOTTOM)
+        self.fitall_button = tkinter.Button(self.tab5, text="Fit both channels", command=self.fit_both_curves)
+        self.fitall_button.pack(side=tkinter.BOTTOM)
         # self.fit_button = tkinter.Button(self.tab1, text="Fit the Wide Sweep", command=self.fit_wide_sweep)
         # self.fit_button.pack(side=tkinter.BOTTOM)
         self.figure_tab1(self.tab5, fig_sh_d_X)
@@ -132,6 +143,22 @@ class ForksGUI:
         self.figure_tab1(self.tab5, fig_sh_d_Y)
         self.figures_dict[fig_sh_d_Y].Xtype = "Frequency [Hz]"
         self.figures_dict[fig_sh_d_Y].Ytype = "Y [mV]"
+
+        # sixth tab. Circle X vs Y
+        self.tab6 = ttk.Frame(self.nb)
+        self.nb.add(self.tab6, text=" Circle X vs Y")
+        self.nb.pack(expand=1, fill="both")
+        self.figure_tab2(self.tab6, fig_theory_x, 1, 1)
+        self.figures_dict[fig_theory_x].Xtype = "X [mV]"
+        self.figures_dict[fig_theory_x].Ytype = "Y [mV]"
+
+        # seventh tab. Text with fit parameters
+        self.tab7 = ttk.Frame(self.nb)
+        self.nb.add(self.tab7, text="Fit parameters")
+        self.nb.pack(expand=1, fill="both")
+        self.fit_text = tkinter.Text(self.tab7, height=12, width=60)
+        self.fit_text.pack(side=tkinter.TOP)
+        self.fit_text.insert("end", "\n".join(fit_str))
 
     @staticmethod
     def open_file(sweep: str) -> np.ndarray:
@@ -267,13 +294,12 @@ class ForksGUI:
         """
         try:
             self.figures_dict.update({figure_key: FigEnv()})
-            px = self.figures_dict[figure_key].px
-            py = self.figures_dict[figure_key].py
-            self.figures_dict[figure_key].figure = Figure(figsize=(4, 4), dpi=100)
+            # px = self.figures_dict[figure_key].px
+            # py = self.figures_dict[figure_key].py
+            self.figures_dict[figure_key].figure = Figure(figsize=(6, 6), dpi=100)
             self.figures_dict[figure_key].axes = self.figures_dict[figure_key].figure.add_subplot(111)
+            self.figures_dict[figure_key].axes.set_title(f" {figure_key}: X vs Y")
             self.figures_dict[figure_key].canvas = FigureCanvasTkAgg(self.figures_dict[figure_key].figure, master=area)
-            # self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
-            # self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, expand=1)
             self.figures_dict[figure_key].canvas.get_tk_widget().grid(row=row, column=col, sticky="nsew")
             self.figures_dict[figure_key].canvas.draw()
             app_log.info(f"`{figure_key}` canvas was successfully created")
@@ -415,6 +441,7 @@ class ForksGUI:
         try:
             if (short_sd.dx is not None) and (short_sd.Frequency is not None):
                 id0 = np.argmax(short_sd.dx)
+                short_sd.ind_max = id0
                 max0 = np.amax(short_sd.dx)
                 d1 = len(short_sd.dx) - id0
                 shift = np.minimum(id0, d1)
@@ -427,9 +454,7 @@ class ForksGUI:
                 x1 = np.mean(arg1)
                 x2 = np.mean(arg2)
                 k = (p2-p1)/(x2-x1)
-                # print(p1, p2, x1, x2, k)
                 fits.update_slope_x(k)
-                # print(fits.fitx)
                 self.plot_subtr(short_sd)
         except Exception as ex:
             app_log.error(f"Slope of X can not be fixed: {ex}")
@@ -446,7 +471,6 @@ class ForksGUI:
             if (short_sd.X is not None) and (short_sd.dx is not None):
                 part1 = short_sd.dx[0:num]
                 part2 = short_sd.dx[-num:-1]
-                print(np.mean(part1), np.std(part1), np.mean(part2), np.std(part2))
                 subtr = np.minimum(np.mean(part1), np.mean(part2))
                 add = np.maximum(np.std(part1), np.std(part2))
                 fits.update_intersect_x(subtr-add)
@@ -474,7 +498,6 @@ class ForksGUI:
                 y1 = np.mean(part1[prob - 2*num: prob - num])
                 y2 = np.mean(part1[prob + num: prob + 2*num])
                 delta = y2-y1
-                print(prob, part1[prob], delta)
                 short_sd.update_y_tail(prob, delta)
                 if self.figures_dict[fig_sh_sw_Y].scat is not None:
                     self.figures_dict[fig_sh_sw_Y].scat.remove()
@@ -485,6 +508,87 @@ class ForksGUI:
             app_log.error(f"Y-tail can NOT be fixed {ex}")
         else:
             app_log.info("Y-tail is fixed")
+
+    def fix_intersect_y(self) -> None:
+        """
+        Fixes an interface of the dY signal
+        """
+        try:
+            if (short_sd.dy is not None) and (short_sd.Frequency is not None):
+                id0 = np.argmax(short_sd.dy)
+                max_y = short_sd.dy[id0]
+                id1 = np.argmin(short_sd.dy)
+                min_y = short_sd.dy[id1]
+                val = (max_y + min_y)/2
+                fits.update_intersect_y(val)
+                self.plot_subtr(short_sd)
+        except Exception as ex:
+            app_log.error(f"Y-intersect can NOT be fixed: {ex}")
+        else:
+            app_log.info(f"Y-intersect is fixed")
+
+    def fit_both_curves(self):
+        """
+        Performs the fit of dX and dY
+        """
+        a = 10000
+        q = 30.0
+        try:
+            if (short_sd.dy is not None) and (short_sd.Frequency is not None) and (short_sd.dx is not None):
+                if short_sd.ind_max is not None:
+                    f0 = short_sd.Frequency[short_sd.ind_max]
+                else:
+                    f0 = 32000
+                p0 = [f0, q, a]
+                # short_sd.gen_fit_x(f0, q, a)
+                # self.plot_fig_tab1(short_sd.Frequency, short_sd.dx_fit, fig_theory_x)
+                popt, pcov = curve_fit(short_sd.fun_fit_x, short_sd.Frequency, short_sd.dx, p0, maxfev=10000,
+                                       ftol=0.00005, xtol=0.00005)
+                short_sd.gen_fit_x(popt[0], popt[1], popt[2])
+                short_sd.gen_fit_y(popt[0], popt[1], popt[2])
+                if self.figures_dict[fig_sh_d_X].pltt is not None:
+                    self.figures_dict[fig_sh_d_X].pltt.remove()
+                self.figures_dict[fig_sh_d_X].pltt = self.figures_dict[fig_sh_d_X].axes.scatter(short_sd.Frequency,
+                                                                                                short_sd.dx_fit,
+                                                                                                s=4, c="red")
+                self.figures_dict[fig_sh_d_X].canvas.draw()
+                if self.figures_dict[fig_sh_d_Y].pltt is not None:
+                    self.figures_dict[fig_sh_d_Y].pltt.remove()
+                self.figures_dict[fig_sh_d_Y].pltt = self.figures_dict[fig_sh_d_Y].axes.scatter(short_sd.Frequency,
+                                                                                                short_sd.dy_fit,
+                                                                                                s=4, c="red")
+                self.figures_dict[fig_sh_d_Y].canvas.draw()
+                self.plot_circle(fig_theory_x)
+        except Exception as ex:
+            app_log.error(f"Can not fit: {ex}")
+        else:
+            app_log.info(f"Both channels were fitted")
+
+    def plot_circle(self, figure_key: str) -> None:
+        """
+        Plot X vs Y as well as fitted X vs Y
+        """
+        try:
+            if (short_sd.dx is not None) and (short_sd.dy is not None) and (short_sd.dx_fit is not None) and \
+            (short_sd.dy_fit is not None):
+                self.figures_dict[figure_key].axes.clear()
+                self.figures_dict[figure_key].scat = self.figures_dict[figure_key].axes.scatter(short_sd.dx,
+                                                                                                short_sd.dy,
+                                                                                                s=10, c="blue")
+                self.figures_dict[figure_key].pltt= self.figures_dict[figure_key].axes.scatter(short_sd.dx_fit,
+                                                                                                short_sd.dy_fit,
+                                                                                                s=5, c="red")
+                self.figures_dict[figure_key].axes.set_xlabel(self.figures_dict[figure_key].Xtype)
+                self.figures_dict[figure_key].axes.set_ylabel(self.figures_dict[figure_key].Ytype)
+                self.figures_dict[figure_key].axes.set_xlim(min(short_sd.dx), max(short_sd.dx))
+                self.figures_dict[figure_key].axes.set_ylim(min(short_sd.dy), max(short_sd.dy))
+                self.figures_dict[figure_key].axes.grid()
+                self.figures_dict[figure_key].canvas.draw()
+        except Exception as ex:
+            app_log.error(f"`{figure_key}` was not updated due to: {ex}")
+        else:
+            app_log.info(f"Circle in {figure_key} was plotted")
+
 
 
 if __name__ == "__main__":
