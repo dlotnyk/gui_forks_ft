@@ -12,6 +12,32 @@ from logger import log_settings
 app_log = log_settings()
 
 
+class Mediator(ABC):
+    """
+    Uses for update the fit parameters printing initiates by setters inside FitParams class
+    """
+    def notify(self, sender: object, event: str):
+        pass
+
+
+class Base:
+    """
+    The Base Component provides the basic functionality of storing a mediator's
+    instance inside component objects.
+    """
+
+    def __init__(self, mediator: Mediator = None) -> None:
+        self._mediator = mediator
+
+    @property
+    def mediator(self) -> Optional[Mediator]:
+        return self._mediator
+
+    @mediator.setter
+    def mediator(self, mediator: Mediator) -> None:
+        self._mediator = mediator
+
+
 class SweepData(object):
     """
     class contains and transforms data from .dat file into np.arrays
@@ -283,13 +309,17 @@ class FigureGroup(NamedTuple):
     sub_y: str
 
 
-class FitParams:
+class FitParams(Base):
     """
     Contains all necessary fitting parameters and method to access/change those
     """
     def __init__(self):
+        super().__init__()
         self.__fitx: Optional[np.ndarray] = None
         self.__fity: Optional[np.ndarray] = None
+        self.__q: Optional[np.ndarray] = None
+        self.__f0: Optional[np.ndarray] = None
+        self.__k: Optional[np.ndarray] = None
 
     @property
     def fitx(self) -> np.ndarray:
@@ -297,7 +327,13 @@ class FitParams:
 
     @fitx.setter
     def fitx(self, vals: np.ndarray) -> None:
-        self.__fitx = vals
+        try:
+            self.__fitx = vals
+        except Exception as ex:
+            app_log.error(f"Can NOT change fit X: {ex}")
+        else:
+            if self.mediator is not None:
+                self.mediator.notify(self, "changeparams")
 
     @property
     def fity(self) -> np.ndarray:
@@ -305,7 +341,13 @@ class FitParams:
 
     @fity.setter
     def fity(self, vals: np.ndarray) -> None:
-        self.__fity = vals
+        try:
+            self.__fity = vals
+        except Exception as ex:
+            app_log.error(f"Can NOT change fit Y: {ex}")
+        else:
+            if self.mediator is not None:
+                self.mediator.notify(self, "changeparams")
 
     def update_slope_x(self, val: float) -> None:
         """
@@ -323,6 +365,9 @@ class FitParams:
                     app_log.info("Slope has NOT been changed")
         except Exception as ex:
             app_log.error(f"Can not change slope x: {ex}")
+        else:
+            if self.mediator is not None:
+                self.mediator.notify(self, "changeparams")
 
     def update_intersect_x(self, val: float) -> None:
         """
@@ -334,6 +379,9 @@ class FitParams:
                 self.__fitx[-1] += val
         except Exception as ex:
             app_log.error(f"Can not change intersect X: {ex}")
+        else:
+            if self.mediator is not None:
+                self.mediator.notify(self, "changeparams")
 
     def update_intersect_y(self, val: float) -> None:
         """
@@ -345,13 +393,75 @@ class FitParams:
                 self.__fity[-1] += val
         except Exception as ex:
             app_log.error(f"Can not change intersect Y: {ex}")
+        else:
+            if self.mediator is not None:
+                self.mediator.notify(self, "changeparams")
+
+    @property
+    def q(self) -> np.ndarray:
+        return self.__q
+
+    @q.setter
+    def q(self, vals: float) -> None:
+        try:
+            self.__q = np.array([vals])
+        except Exception as ex:
+            app_log.error(f"Can NOT change Q: {ex}")
+        else:
+            if self.mediator is not None:
+                self.mediator.notify(self, "changeparams")
+
+    @property
+    def f0(self) -> np.ndarray:
+        return self.__f0
+
+    @f0.setter
+    def f0(self, vals: float) -> None:
+        try:
+            self.__f0 = np.array([vals])
+        except Exception as ex:
+            app_log.error(f"Can NOT change Res Frequency: {ex}")
+        else:
+            if self.mediator is not None:
+                self.mediator.notify(self, "changeparams")
+
+    @property
+    def k(self) -> np.ndarray:
+        return self.__k
+
+    @k.setter
+    def k(self, vals: float) -> None:
+        try:
+            self.__k = np.array([vals])
+        except Exception as ex:
+            app_log.error(f"Can NOT change k: {ex}")
+        else:
+            if self.mediator is not None:
+                self.mediator.notify(self, "changeparams")
 
 
-class Mediator(ABC):
+class TextsMan(NamedTuple):
     """
-    Uses for update the fit parameters printing initiates by setters inside FitParams class
+    Text for message boxes
     """
-    def notify(self, sender, event):
-        pass
+    manual: str = "Some instructions.\nApp consists of 6 tabs with buttons and 2 sliders.\n" \
+             "First tab actions:\n" \
+             "1. Open a wide sweep with button \"Open Wide Sweep\" in dialog window choose file.\n" \
+             "2. Optional: Select region without resonance frequency with sliders.\n" \
+             "3. Fit the Wide sweep with corresponding button. In the tab \"Fit parameters\" should appear" \
+             "coefficients.\n" \
+             "4. Second tab should be updated.\n" \
+             "Third tab actions:\n" \
+             "5. Open short sweep with corresponding button.\n" \
+             "6. Forth tab now updated.\n" \
+             "7. Optional: You can fix the Tail of Y-channel by clicking button \"Fix Y tail\"\n" \
+             "Fourth tab actions: \n" \
+             "8. Click \"Slope X\"\n" \
+             "9. Click \"Intersect X\"\n" \
+             "10. Click \"Intersect Y\"\n" \
+             "11. Click \"Fit both channels\"\n" \
+             "Fifth and sixth tabs now updated. Ideally red line (fit) should follows blue (measured)\n" \
+             "and circle should be plotted, the sixth tab now contains the resulted values of coefficients.\n"
+    eq: str = r"Note: $\frac{a*f*f_0/Q}{(f^2 - f_0^2)^2 + f^2*f_0^2/Q^2}$"
 
 

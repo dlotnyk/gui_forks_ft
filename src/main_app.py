@@ -13,12 +13,14 @@ import scipy.signal as sci
 from scipy.optimize import curve_fit
 
 from logger import log_settings
-from misc import SweepData, FigEnv, FigureGroup, FitParams, Mediator
+from misc import SweepData, FigEnv, FigureGroup, FitParams, Mediator, Base, TextsMan
 
 #  Logger definitions
 app_log = log_settings()
 
 # Variables
+poly_x = 3
+poly_y = 4
 fits = FitParams()
 long_sd = SweepData()
 short_sd = SweepData()
@@ -34,18 +36,20 @@ fig_sh_d_Y = "figure 9"
 fig_theory_x = "figure 10"
 fig_wide = FigureGroup("wide", fig_r_X, fig_r_Y, fig_d_X, fig_d_Y)
 fig_short = FigureGroup("short", fig_sh_sw_X, fig_sh_sw_Y, fig_sh_d_X, fig_sh_d_Y)
-fit_str = ("x0 = ", "x1 = ", "x2 = ", "x3 = ", "y1 = ", "y2 = ", "y3 = ", "y4 = ", "f0 = ", "Q = ", "K = ")
+fit_str = ("x0 = ", "x1 = ", "x2 = ", "x3 = ", "y0 = ", "y1 = ", "y2 = ", "y3 = ", "y4 = ", "f0 = ", "Q = ", "K = ")
+# fit_str = ("x0 = ", "x1 = ", "x2 = ", "x3 = ", "y1 = ", "y2 = ", "y3 = ", "y4 = ")
 
 
 # class UpdateFitText(Mediator):
 #     def __init__(self, component1: ForksGUI, ):
 
 
-class ForksGUI:
+class ForksGUI(Base):
     """
     Main class for launch Forks GUI
     """
     def __init__(self, master: tkinter.Tk) -> None:
+        super().__init__()
         self.master = master  # main
         self.slide1 = tkinter.IntVar()
         self.slide2 = tkinter.IntVar()
@@ -81,18 +85,6 @@ class ForksGUI:
         self.close_button = tkinter.Button(master, text="Close", command=master.quit)
         self.close_button.pack(anchor='center')
 
-        # second  tab
-        # todo: grid layout
-        # self.tab2 = ttk.Frame(self.nb)
-        # tkinter.Grid.rowconfigure(master, 0, weight=1)
-        # tkinter.Grid.columnconfigure(master, 0, weight=1)
-        # self.tab2.grid(row=0, column=0, sticky="nsew")
-        # self.nb.add(self.tab2, text="Short sweep")
-        # self.nb.pack(fill="both")
-        # self.figure_tab2(self.tab2, figure_fit_X, 1, 0)
-        # sc2 = tkinter.Scale(self.tab2, from_=0, to=1, orient='horizontal')
-        # sc2.grid(row=5, column=0, sticky="nsew")
-
         # third tab. Long sweep subtract
         self.tab3 = ttk.Frame(self.nb)
         self.nb.add(self.tab3, text="Substraction of the wide sweep")
@@ -108,8 +100,6 @@ class ForksGUI:
         self.tab4 = ttk.Frame(self.nb)
         self.nb.add(self.tab4, text="Short sweep")
         self.nb.pack(expand=1, fill="both")
-        # self.fit_button = tkinter.Button(self.tab1, text="Fit the Wide Sweep", command=self.fit_wide_sweep)
-        # self.fit_button.pack(side=tkinter.BOTTOM)
         self.oss_button = tkinter.Button(self.tab4, text="Open Short Sweep", command=self.open_short_sweep)
         self.oss_button.pack(side=tkinter.BOTTOM)
         self.refr_button = tkinter.Button(self.tab4, text="Refresh", command=lambda: self.plot_subtr(short_sd))
@@ -135,8 +125,6 @@ class ForksGUI:
         self.intery_button.pack(side=tkinter.BOTTOM)
         self.fitall_button = tkinter.Button(self.tab5, text="Fit both channels", command=self.fit_both_curves)
         self.fitall_button.pack(side=tkinter.BOTTOM)
-        # self.fit_button = tkinter.Button(self.tab1, text="Fit the Wide Sweep", command=self.fit_wide_sweep)
-        # self.fit_button.pack(side=tkinter.BOTTOM)
         self.figure_tab1(self.tab5, fig_sh_d_X)
         self.figures_dict[fig_sh_d_X].Xtype = "Frequency [Hz]"
         self.figures_dict[fig_sh_d_X].Ytype = "X [mV]"
@@ -158,7 +146,10 @@ class ForksGUI:
         self.nb.pack(expand=1, fill="both")
         self.fit_text = tkinter.Text(self.tab7, height=12, width=60)
         self.fit_text.pack(side=tkinter.TOP)
-        self.fit_text.insert("end", "\n".join(fit_str))
+        self.fit_text.insert(tkinter.END, "\n".join(fit_str))
+
+        app_log.info("All tabs were initialized")
+        messagebox.showinfo("Manual", TextsMan.manual)
 
     @staticmethod
     def open_file(sweep: str) -> np.ndarray:
@@ -188,9 +179,11 @@ class ForksGUI:
                 app_log.debug(f"Shape of array is {np.shape(data)}")
         except AttributeError:
             app_log.critical(f"File does not contain an appropriate data or empty")
+            messagebox.showerror("Error", "File does not contain an appropriate data or empty")
             raise ValueError("No data file was created. Check the file")
         except Exception as ex:
-            app_log.error(f"Error while file open {ex}")
+            app_log.error(f"File can NOT be opened: {ex}")
+            messagebox.showerror("Error", f"File can NOT be opened: {ex}")
             raise ValueError("No data was created")
         else:
             app_log.info(f"File: {file1} was parsed")
@@ -230,10 +223,6 @@ class ForksGUI:
             short_sd.create_mask()
             short_sd.group = "short"
             self.plot_subtr(short_sd)
-            # self.sc1.configure(to=short_sd.max_slider)
-            # self.sc2.configure(to=long_sd.max_slider)
-            # self.sc1.set(int(long_sd.max_slider / 2))
-            # self.sc2.set(int(long_sd.max_slider / 2))
         except Exception as ex:
             app_log.warning(f"Open of wide sweep fails cause of: {ex}")
         else:
@@ -252,10 +241,10 @@ class ForksGUI:
             self.figures_dict[figure_key].axes = self.figures_dict[figure_key].figure.add_subplot(111)
             self.figures_dict[figure_key].canvas = FigureCanvasTkAgg(self.figures_dict[figure_key].figure, master=area)
             self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, fill=tkinter.BOTH, expand=1)
-            # self.figures_dict[figure_key].canvas.get_tk_widget().pack(side=tkinter.TOP, expand=1)
             self.figures_dict[figure_key].canvas.draw()
             app_log.info(f"`{figure_key}` canvas was successfully created")
         except Exception as ex:
+            messagebox.showerror("Error", f"Figure {figure_key} can NOT be created: {ex}")
             app_log.error(f"`{figure_key}` was not created due to {ex}")
 
     def plot_fig_tab1(self, x: np.ndarray, y: np.ndarray, figure_key: str) -> None:
@@ -283,6 +272,7 @@ class ForksGUI:
             app_log.info(f"`{figure_key}` raw data were plotted")
         except Exception as ex:
             app_log.error(f"`{figure_key}` was not updated due to: {ex}")
+            messagebox.showerror("Error", f"Figure {figure_key} can NOT be Updated: {ex}")
 
     def figure_tab2(self, area: ttk.Frame, figure_key: str, row: int, col: int) -> None:
         """
@@ -304,6 +294,7 @@ class ForksGUI:
             self.figures_dict[figure_key].canvas.draw()
             app_log.info(f"`{figure_key}` canvas was successfully created")
         except Exception as ex:
+            messagebox.showerror("Error", f"Figure {figure_key} can NOT be created: {ex}")
             app_log.error(f"`{figure_key}` was not created due to {ex}")
 
     def update_slider_tab1(self, value) -> None:
@@ -343,9 +334,9 @@ class ForksGUI:
                     and long_sd.X is not None and long_sd.Y is not None:
 
                 fits.fitx = np.polyfit(long_sd.Frequency[long_sd.mask],
-                                   long_sd.X[long_sd.mask], 3)
+                                   long_sd.X[long_sd.mask], poly_x)
                 fits.fity = np.polyfit(long_sd.Frequency[long_sd.mask],
-                                   long_sd.Y[long_sd.mask], 4)
+                                   long_sd.Y[long_sd.mask], poly_y)
                 r_fit_x = np.poly1d(fits.fitx)
                 r_fit_y = np.poly1d(fits.fity)
                 if self.figures_dict[fig_r_X].pltt:
@@ -367,6 +358,7 @@ class ForksGUI:
                 self.plot_subtr(long_sd)
                 app_log.info("Fit of wide sweep was done")
         except Exception as ex:
+            messagebox.showerror("Error", f"Fails to fit the wide sweep: {ex}")
             app_log.error(f"Fail to fit: {ex}")
 
     def plot_subtr(self, sweep: SweepData) -> None:
@@ -430,7 +422,7 @@ class ForksGUI:
                                                           "Please fit and click Refresh button.")
         except Exception as ex:
             app_log.error(f"Plot sub is fail: {ex}")
-            messagebox.showerror("Error", f"{ex}")
+            messagebox.showerror("Error", f"Plot of figure is fail: {ex}")
 
     def fix_slope_x(self) -> None:
         """
@@ -458,6 +450,7 @@ class ForksGUI:
                 self.plot_subtr(short_sd)
         except Exception as ex:
             app_log.error(f"Slope of X can not be fixed: {ex}")
+            messagebox.showerror("Error", f"Slope for X was NOT updated: {ex}")
         else:
             app_log.info(f"Slope for X was updated")
 
@@ -477,6 +470,7 @@ class ForksGUI:
                 self.plot_subtr(short_sd)
         except Exception as ex:
             app_log.error(f"Intersect of X can NOT be changed: {ex}")
+            messagebox.showerror("Error", f"Intersection for X was NOT updated: {ex}")
         else:
             app_log.info(f"Intersect X is changed")
 
@@ -506,6 +500,7 @@ class ForksGUI:
                 self.figures_dict[fig_sh_sw_Y].canvas.draw()
         except Exception as ex:
             app_log.error(f"Y-tail can NOT be fixed {ex}")
+            messagebox.showerror("Error", f"Y-tail was NOT updated: {ex}")
         else:
             app_log.info("Y-tail is fixed")
 
@@ -524,6 +519,7 @@ class ForksGUI:
                 self.plot_subtr(short_sd)
         except Exception as ex:
             app_log.error(f"Y-intersect can NOT be fixed: {ex}")
+            messagebox.showerror("Error", f"Intersect for Y was NOT updated: {ex}")
         else:
             app_log.info(f"Y-intersect is fixed")
 
@@ -540,8 +536,6 @@ class ForksGUI:
                 else:
                     f0 = 32000
                 p0 = [f0, q, a]
-                # short_sd.gen_fit_x(f0, q, a)
-                # self.plot_fig_tab1(short_sd.Frequency, short_sd.dx_fit, fig_theory_x)
                 popt, pcov = curve_fit(short_sd.fun_fit_x, short_sd.Frequency, short_sd.dx, p0, maxfev=10000,
                                        ftol=0.00005, xtol=0.00005)
                 short_sd.gen_fit_x(popt[0], popt[1], popt[2])
@@ -558,9 +552,13 @@ class ForksGUI:
                                                                                                 short_sd.dy_fit,
                                                                                                 s=4, c="red")
                 self.figures_dict[fig_sh_d_Y].canvas.draw()
+                fits.f0 = popt[0]
+                fits.q = popt[1]
+                fits.k = self.find_k()
                 self.plot_circle(fig_theory_x)
         except Exception as ex:
             app_log.error(f"Can not fit: {ex}")
+            messagebox.showerror("Error", f"The Short sweep fit fails: {ex}")
         else:
             app_log.info(f"Both channels were fitted")
 
@@ -586,14 +584,87 @@ class ForksGUI:
                 self.figures_dict[figure_key].canvas.draw()
         except Exception as ex:
             app_log.error(f"`{figure_key}` was not updated due to: {ex}")
+            messagebox.showerror("Error", f"Circle plot was not plotted: {ex}")
         else:
             app_log.info(f"Circle in {figure_key} was plotted")
 
+    def change_text(self):
+        try:
+            if fits.fitx is None:
+                x_params = np.empty(poly_x+1, dtype=str)
+            else:
+                x_params = np.flip(fits.fitx)
+            if fits.fity is None:
+                y_params = np.empty(poly_y+1, dtype=str)
+            else:
+                y_params = np.flip(fits.fity)
+            if fits.f0 is None:
+                f0 = np.empty(1, dtype=str)
+            else:
+                f0 = fits.f0
+            if fits.q is None:
+                q = np.empty(1, dtype=str)
+            else:
+                q = fits.q
+            if fits.k is None:
+                k = np.empty(1, dtype=str)
+            else:
+                k = fits.k
+            sum_arr = np.concatenate((x_params, y_params, f0, q, k))
+            sum_str = "".join("{0}\t{1}\n".format(ii, jj) for ii, jj in zip(fit_str, sum_arr))
+            self.fit_text.delete(1.0, tkinter.END)
+            self.fit_text.insert(tkinter.END, sum_str)
+        except Exception as ex:
+            app_log.error(f"Fit box can NOT be updated: {ex}")
+            messagebox.showerror("Error", f"Parameter Text box was NOT updated: {ex}")
+        else:
+            app_log.info(f"Fit box is updated")
+
+    def find_k(self) -> Optional[float]:
+        """
+        Find a K - coefficient to calibrate sensitivity of locking. r = sqrt(x^2 + y^2) at resonant frequency
+        r_max == drive voltage
+        """
+        try:
+            if (short_sd.dx_fit is not None) and (short_sd.dy_fit is not None) and (fits.q is not None):
+                x_m = short_sd.dx_fit.max()
+                y_m = short_sd.dy_fit.max()
+                val = np.sqrt(x_m**2 + y_m**2)
+                val1 = fits.q*0.1/val
+                k = val1[0]
+            else:
+                k = None
+        except Exception as ex:
+            app_log.error(f"Can not find K: {ex}")
+            messagebox.showerror("Error", f"Can not calculate `k`: {ex}")
+            return None
+        else:
+            app_log.info("K is found")
+            return k
+
+
+class ConcreteMedia(Mediator):
+    """
+    Makes communication between two classes: ForksGUI and FitParams
+    """
+    def __init__(self, component1: ForksGUI, component2: FitParams) -> None:
+        self._component1 = component1
+        self._component1.mediator = self
+        self._component2 = component2
+        self._component2.mediator = self
+
+    def notify(self, sender, event) -> None:
+        """
+        FitParams sends a notification to upgrade a txt with fitting parameters while setters used.
+        """
+        if event == "changeparams":
+            self._component1.change_text()
 
 
 if __name__ == "__main__":
     app_log.info("Application has started")
     root = tkinter.Tk()
     my_gui = ForksGUI(root)
+    media = ConcreteMedia(my_gui, fits)
     root.mainloop()
     app_log.info("Application has finished")
