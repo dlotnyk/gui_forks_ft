@@ -3,7 +3,11 @@ from tkinter import filedialog
 from tkinter import ttk
 from tkinter import messagebox
 import datetime
+import matplotlib as mpl
+mpl.use("TKAgg")
 from typing import Dict, Tuple, Optional
+import matplotlib as mpl
+mpl.use("TKAgg")
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 from matplotlib.backend_bases import key_press_handler

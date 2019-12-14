@@ -12,3 +12,9 @@ Log message has such `regex` pattern:
 ```
 
 with a start pattern `^2`
+
+Build to avoid `scipy` problems:
+```
+pyinstaller -F --paths e:\PycharmProjects\gui_forks_ft\venv\Lib\site-packages\scipy\.libs\ main_app.py
+```
+or add path to `pathex`

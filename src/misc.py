@@ -1,5 +1,7 @@
 import numpy as np
 from abc import ABC
+import matplotlib as mpl
+mpl.use("TKAgg")
 from typing import Set, Dict, Tuple, List, Optional, NamedTuple, Iterable
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
@@ -440,11 +442,11 @@ class FitParams(Base):
                 self.mediator.notify(self, "changeparams")
 
 
-class TextsMan(NamedTuple):
+class TextsMan:
     """
     Text for message boxes
     """
-    manual: str = "Some instructions.\nApp consists of 6 tabs with buttons and 2 sliders.\n" \
+    manual = "Some instructions.\nApp consists of 6 tabs with buttons and 2 sliders.\n" \
              "First tab actions:\n" \
              "1. Open a wide sweep with button \"Open Wide Sweep\" in dialog window choose file.\n" \
              "2. Optional: Select region without resonance frequency with sliders.\n" \
@@ -462,6 +464,6 @@ class TextsMan(NamedTuple):
              "11. Click \"Fit both channels\"\n" \
              "Fifth and sixth tabs now updated. Ideally red line (fit) should follows blue (measured)\n" \
              "and circle should be plotted, the sixth tab now contains the resulted values of coefficients.\n"
-    eq: str = r"Note: $\frac{a*f*f_0/Q}{(f^2 - f_0^2)^2 + f^2*f_0^2/Q^2}$"
+    eq = r"Note: $\frac{a*f*f_0/Q}{(f^2 - f_0^2)^2 + f^2*f_0^2/Q^2}$"
 
 
