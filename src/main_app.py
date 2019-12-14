@@ -3,7 +3,7 @@ from tkinter import filedialog
 from tkinter import ttk
 from tkinter import messagebox
 import datetime
-from typing import Set, Dict, Tuple, List, Optional
+from typing import Dict, Tuple, Optional
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 from matplotlib.backend_bases import key_press_handler
@@ -334,9 +334,9 @@ class ForksGUI(Base):
                     and long_sd.X is not None and long_sd.Y is not None:
 
                 fits.fitx = np.polyfit(long_sd.Frequency[long_sd.mask],
-                                   long_sd.X[long_sd.mask], poly_x)
+                                       long_sd.X[long_sd.mask], poly_x)
                 fits.fity = np.polyfit(long_sd.Frequency[long_sd.mask],
-                                   long_sd.Y[long_sd.mask], poly_y)
+                                       long_sd.Y[long_sd.mask], poly_y)
                 r_fit_x = np.poly1d(fits.fitx)
                 r_fit_y = np.poly1d(fits.fity)
                 if self.figures_dict[fig_r_X].pltt:
@@ -397,7 +397,7 @@ class ForksGUI(Base):
                     self.figures_dict[fig_namex].axes.set_ylim(min(sweep.dx), max(sweep.dx))
                     self.figures_dict[fig_namex].scat = self.figures_dict[fig_namex].axes.scatter(sweep.Frequency,
                                                                                                   sweep.dx,
-                                                                                              s=5, c="green")
+                                                                                                  s=5, c="green")
                 self.figures_dict[fig_namex].canvas.draw()
                 app_log.info(f"`{fig_namex}` subtract data were plotted")
                 if self.figures_dict[fig_namey].scat is None:
@@ -413,7 +413,7 @@ class ForksGUI(Base):
                     self.figures_dict[fig_namey].axes.set_ylim(min(sweep.dy), max(sweep.dy))
                     self.figures_dict[fig_namey].scat = self.figures_dict[fig_namey].axes.scatter(sweep.Frequency,
                                                                                                   sweep.dy,
-                                                                                              s=5, c="green")
+                                                                                                  s=5, c="green")
                 self.figures_dict[fig_namey].canvas.draw()
                 app_log.info(f"`{fig_namey}` subtract data were plotted")
         except AttributeError:
@@ -434,7 +434,6 @@ class ForksGUI(Base):
             if (short_sd.dx is not None) and (short_sd.Frequency is not None):
                 id0 = np.argmax(short_sd.dx)
                 short_sd.ind_max = id0
-                max0 = np.amax(short_sd.dx)
                 d1 = len(short_sd.dx) - id0
                 shift = np.minimum(id0, d1)
                 part1 = short_sd.dx[(id0-shift):(id0-shift)+nums]
@@ -496,7 +495,8 @@ class ForksGUI(Base):
                 if self.figures_dict[fig_sh_sw_Y].scat is not None:
                     self.figures_dict[fig_sh_sw_Y].scat.remove()
                 self.figures_dict[fig_sh_sw_Y].scat = self.figures_dict[fig_sh_sw_Y].axes.scatter(short_sd.Frequency,
-                                                                                             short_sd.Y, s=10, c="blue")
+                                                                                                  short_sd.Y, s=10,
+                                                                                                  c="blue")
                 self.figures_dict[fig_sh_sw_Y].canvas.draw()
         except Exception as ex:
             app_log.error(f"Y-tail can NOT be fixed {ex}")
@@ -568,7 +568,7 @@ class ForksGUI(Base):
         """
         try:
             if (short_sd.dx is not None) and (short_sd.dy is not None) and (short_sd.dx_fit is not None) and \
-            (short_sd.dy_fit is not None):
+               (short_sd.dy_fit is not None):
                 self.figures_dict[figure_key].axes.clear()
                 self.figures_dict[figure_key].scat = self.figures_dict[figure_key].axes.scatter(short_sd.dx,
                                                                                                 short_sd.dy,
