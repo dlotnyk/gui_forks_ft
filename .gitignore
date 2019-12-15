@@ -106,3 +106,4 @@ venv.bak/
 /src/dll_gen.py
 /temp.txt
 !/src/dist/
+/src/dist/
