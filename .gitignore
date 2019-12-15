@@ -103,3 +103,7 @@ venv.bak/
 .mypy_cache/
 !/src/.mypy_cache/
 /src/.mypy_cache/
+/src/dll_gen.py
+/temp.txt
+!/src/dist/
+/src/dist/
