@@ -18,3 +18,16 @@ Build to avoid `scipy` problems:
 pyinstaller -F --paths e:\PycharmProjects\gui_forks_ft\venv\Lib\site-packages\scipy\.libs\ main_app.py
 ```
 or add path to `pathex`
+# Build a docker image
+```
+ sudo docker build -f Dockerfile --tag gui-forks-app .
+```
+
+# Run docker image under Ubuntu
+To allow `tkinter` run:
+```
+sudo apt-get install x11-xserver-utils
+xhost +
+sudo docker run -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=unix$DISPLAY --name my-app gui-forks-app
+
+```
